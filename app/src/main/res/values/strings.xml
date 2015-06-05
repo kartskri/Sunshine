@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Sunshine</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_detail">DetailActivity</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <string name="pref_location_label">Location</string>
+    <string name="pref_location_key">locationkey</string>
+    <string name="pref_location_default_value">94043</string>
+
+    <string name="pref_metric_label">Pick Metric</string>
+    <string name="pref_metric_key">metrickey</string>
+    <string name="pref_metric_default_value">metric</string>
+    <string name="pref_metric_imperial">imperial</string>
+
+
+</resources>
