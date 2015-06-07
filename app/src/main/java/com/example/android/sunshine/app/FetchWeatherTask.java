@@ -15,9 +15,12 @@
  */
 package com.example.android.sunshine.app;
 
+import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
@@ -25,6 +28,7 @@ import android.text.format.Time;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 
+import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.data.WeatherContract.WeatherEntry;
 
 import org.json.JSONArray;
@@ -48,7 +52,7 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
     private ArrayAdapter<String> mForecastAdapter;
     private final Context mContext;
 
-    public FetchWeatherTask(Context context, ArrayAdapter<String> forecastAdapter) {
+        public FetchWeatherTask(Context context, ArrayAdapter<String> forecastAdapter) {
         mContext = context;
         mForecastAdapter = forecastAdapter;
     }
@@ -99,22 +103,6 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
         String highLowStr = roundedHigh + "/" + roundedLow;
         return highLowStr;
-    }
-
-    /**
-     * Helper method to handle insertion of a new location in the weather database.
-     *
-     * @param locationSetting The location string used to request updates from the server.
-     * @param cityName A human-readable city name, e.g "Mountain View"
-     * @param lat the latitude of the city
-     * @param lon the longitude of the city
-     * @return the row ID of the added location.
-     */
-    long addLocation(String locationSetting, String cityName, double lat, double lon) {
-        // Students: First, check if the location with this city name exists in the db
-        // If it exists, return the current ID
-        // Otherwise, insert it using the content resolver and the base URI
-        return -1;
     }
 
     /*
@@ -278,19 +266,17 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
             Uri weatherForLocationUri = WeatherEntry.buildWeatherLocationWithStartDate(
                     locationSetting, System.currentTimeMillis());
 
-            // Students: Uncomment the next lines to display what what you stored in the bulkInsert
+            Cursor cur = mContext.getContentResolver().query(weatherForLocationUri,
+                    null, null, null, sortOrder);
 
-//            Cursor cur = mContext.getContentResolver().query(weatherForLocationUri,
-//                    null, null, null, sortOrder);
-//
-//            cVVector = new Vector<ContentValues>(cur.getCount());
-//            if ( cur.moveToFirst() ) {
-//                do {
-//                    ContentValues cv = new ContentValues();
-//                    DatabaseUtils.cursorRowToContentValues(cur, cv);
-//                    cVVector.add(cv);
-//                } while (cur.moveToNext());
-//            }
+            cVVector = new Vector<ContentValues>(cur.getCount());
+            if ( cur.moveToFirst() ) {
+                do {
+                    ContentValues cv = new ContentValues();
+                    DatabaseUtils.cursorRowToContentValues(cur, cv);
+                    cVVector.add(cv);
+                } while (cur.moveToNext());
+            }
 
             Log.d(LOG_TAG, "FetchWeatherTask Complete. " + cVVector.size() + " Inserted");
 
@@ -398,6 +384,32 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
         }
         // This will only happen if there was an error getting or parsing the forecast.
         return null;
+    }
+
+    /**
+     * Helper method to handle insertion of a new location in the weather database.
+     *
+     * @param locationSetting The location string used to request updates from the server.
+     * @param cityName A human-readable city name, e.g "Mountain View"
+     * @param lat the latitude of the city
+     * @param lon the longitude of the city
+     * @return the row ID of the added location.
+     */
+    long addLocation(String locationSetting, String city, double lat, double lon) {
+        long rowid = -1;
+        Cursor locationCursor = mContext.getContentResolver().query(WeatherContract.LocationEntry.CONTENT_URI, new String[]{WeatherContract.LocationEntry._ID}, WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING + " = ?", new String[]{locationSetting}, null);
+        if(locationCursor.moveToFirst()) {
+            // Cursor not null
+            rowid = locationCursor.getColumnIndex(WeatherContract.LocationEntry._ID);
+        } else {
+            ContentValues locationValues = new ContentValues();
+            locationValues.put(WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING, locationSetting);
+            locationValues.put(WeatherContract.LocationEntry.COLUMN_CITY_NAME, city);
+            locationValues.put(WeatherContract.LocationEntry.COLUMN_COORD_LAT, lat);
+            locationValues.put(WeatherContract.LocationEntry.COLUMN_COORD_LONG, lon);
+            Uri uri = mContext.getContentResolver().insert(WeatherContract.LocationEntry.CONTENT_URI, locationValues);
+        }
+        return rowid;
     }
 
     @Override

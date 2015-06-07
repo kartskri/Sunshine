@@ -137,10 +137,12 @@ public class TestDb extends AndroidTestCase {
         // Insert ContentValues into database and get a row ID back
         Long rowid = db.insert(WeatherContract.LocationEntry.TABLE_NAME, null, northpoleContentValues);
         assertEquals(true, rowid > -1);
+        Log.i(LOG_TAG, "Row Id Inserted --> " + rowid);
         // Query the database and receive a Cursor back
-        Cursor cursor = db.query(WeatherContract.LocationEntry.TABLE_NAME, new String [] {WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING}, null, null, null, null, null);
+        Cursor cursor = db.query(WeatherContract.LocationEntry.TABLE_NAME, new String [] {WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING}, "_id=?", new String [] {rowid + ""}, null, null, null);
         // Move the cursor to a valid database row
         while (cursor.moveToNext()) {
+            Log.i(LOG_TAG, "Iterating Cursor ...");
             Log.i(LOG_TAG, cursor.getColumnName(0) + cursor.getString(0));
         }
         // Close Cursor

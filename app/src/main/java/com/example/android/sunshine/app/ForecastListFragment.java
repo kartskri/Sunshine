@@ -2,6 +2,7 @@ package com.example.android.sunshine.app;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -16,9 +17,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CursorAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.utils.JsonParserUtils;
 
 import java.io.BufferedReader;
@@ -31,10 +34,43 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
+import android.support.v4.content.CursorLoader;
+
 /**
  * Created by prolap on 01/06/15.
  */
-public class ForecastListFragment extends Fragment {
+public class ForecastListFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
+
+    private static final int FORECAST_ADAPTER = 0;
+
+    private static final String[] FORECAST_COLUMNS = {
+        WeatherContract.WeatherEntry.TABLE_NAME + "." + WeatherContract.WeatherEntry._ID,
+        WeatherContract.WeatherEntry.COLUMN_DATE,
+        WeatherContract.WeatherEntry.COLUMN_SHORT_DESC,
+        WeatherContract.WeatherEntry.COLUMN_MAX_TEMP,
+        WeatherContract.WeatherEntry.COLUMN_MIN_TEMP,
+        WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING,
+        WeatherContract.WeatherEntry.COLUMN_WEATHER_ID,
+        WeatherContract.LocationEntry.COLUMN_COORD_LAT,
+        WeatherContract.LocationEntry.COLUMN_COORD_LONG
+    };
+
+    // These indices are tied to FORECAST_COLUMNS.  If FORECAST_COLUMNS changes, these
+    // must change.
+    static final int COL_WEATHER_ID = 0;
+    static final int COL_WEATHER_DATE = 1;
+    static final int COL_WEATHER_DESC = 2;
+    static final int COL_WEATHER_MAX_TEMP = 3;
+    static final int COL_WEATHER_MIN_TEMP = 4;
+    static final int COL_LOCATION_SETTING = 5;
+    static final int COL_WEATHER_CONDITION_ID = 6;
+    static final int COL_COORD_LAT = 7;
+    static final int COL_COORD_LONG = 8;
+
+    CursorAdapter mForecastAdapter = null;
 
     public ForecastListFragment() {
         Log.d(LOGTAG, "ForecastListFragment");
@@ -139,10 +175,32 @@ public class ForecastListFragment extends Fragment {
     }
 
     private void updateWeather() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        String locationZipCode = prefs.getString(getString(R.string.pref_location_key), "94043");
-        String metric = prefs.getString(getString(R.string.pref_metric_key), "metric");
-        new AsyncNetworkOperation().execute("http://api.openweathermap.org/data/2.5/forecast/daily?q=" + locationZipCode + "&mode=json&units=" + metric + "&cnt=7");
+        ArrayAdapter<String> forecastAdapter =
+                new ArrayAdapter<String>(
+                        getActivity(), // The current context (this activity)
+                        R.layout.list_item_forecast, // The name of the layout ID.
+                        R.id.list_item_forecast_textview, // The ID of the textview to populate.
+                        new ArrayList());
+        FetchWeatherTask fwt = new FetchWeatherTask(getActivity(), forecastAdapter);
+        //SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        //String locationZipCode = prefs.getString(getString(R.string.pref_location_key), "94043");
+        //String metric = prefs.getString(getString(R.string.pref_metric_key), "metric");
+        fwt.execute(null, null, null);
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        return null;
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        mForecastAdapter.swapCursor(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        mForecastAdapter.swapCursor(null);
     }
 
     private class AsyncNetworkOperation extends AsyncTask<String, Void, String[]> {
